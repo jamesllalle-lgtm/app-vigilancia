@@ -1,0 +1,117 @@
+<div class="container">
+  <div class="card">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <h1>Control de Ingreso</h1>
+      <p class="subtitle">Sistema de Vigilancia</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab" [class.active]="tabActivo === 'dni'" (click)="cambiarTab('dni')">
+        DNI
+      </button>
+      <button class="tab" [class.active]="tabActivo === 'papeletas'" (click)="cambiarTab('papeletas')">
+        Papeletas
+      </button>
+      <button class="tab" [class.active]="tabActivo === 'escaneo'" (click)="cambiarTab('escaneo')">
+        Escaneo
+      </button>
+    </div>
+
+    <div class="search-box" *ngIf="tabActivo !== 'escaneo'">
+      <input type="text" [(ngModel)]="codigo"
+        [placeholder]="tabActivo === 'dni' ? 'Ingrese DNI del trabajador' : 'Ingrese DNI para ver papeletas'"
+        (keyup.enter)="buscar()" [disabled]="cargando" class="input-codigo" />
+      <button (click)="buscar()" [disabled]="cargando || !codigo.trim()" class="btn-buscar">
+        <span *ngIf="!cargando">Buscar</span>
+        <span *ngIf="cargando">Buscando...</span>
+      </button>
+    </div>
+
+    <!-- RESULTADO DNI -->
+    <div class="resultado" *ngIf="buscado && resultado && tabActivo === 'dni'">
+      <div class="resultado-card" [ngClass]="resultado.esTrabajador ? 'autorizado' : 'no-autorizado'">
+        <div class="icono">{{ resultado.esTrabajador ? '✅' : '❌' }}</div>
+        <div class="estado-texto">
+          {{ resultado.esTrabajador ? 'ACCESO PERMITIDO' : 'NO ES TRABAJADOR' }}
+        </div>
+      </div>
+      <div class="datos-persona" *ngIf="resultado.encontrado">
+        <div class="foto-persona">
+          <img [src]="urlFoto" alt="Foto del trabajador" class="foto" (error)="onFotoError($event)" />
+        </div>
+        <div class="dato">
+          <span class="label">Nombre</span>
+          <span class="valor">{{ resultado.persona.nombre }} {{ resultado.persona.apellidoPat }} {{ resultado.persona.apellidoMat }}</span>
+        </div>
+        <div class="dato">
+          <span class="label">Código</span>
+          <span class="valor">{{ resultado.persona.codigo }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTADO PAPELETAS -->
+    <div class="resultado-papeletas" *ngIf="buscado && tabActivo === 'papeletas'">
+      <div *ngIf="papeletas.length === 0" class="no-encontrado">
+        <div class="icono">⚠️</div>
+        <p>No se encontraron papeletas para este DNI</p>
+      </div>
+      <div *ngIf="papeletas.length > 0" class="papeletas-layout">
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="columna-perfil">
+          <div class="foto-grande">
+            <img [src]="urlFoto" alt="Foto" class="foto" (error)="onFotoError($event)" />
+          </div>
+          <div class="perfil-datos">
+            <div class="dato">
+              <span class="label">Trabajador</span>
+              <span class="valor">{{ papeletas[0].nombres }}</span>
+            </div>
+            <div class="dato">
+              <span class="label">Total papeletas</span>
+              <span class="valor">{{ papeletas.length }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- COLUMNA DERECHA -->
+        <div class="columna-papeletas">
+          <div class="papeleta-item" *ngFor="let p of papeletasPaginadas">
+            <div class="papeleta-header">
+              <span class="papeleta-fecha">{{ p.fecha }}</span>
+              <span class="papeleta-estado" [ngClass]="getEstadoClass(p.estado)">{{ p.estado }}</span>
+            </div>
+            <div class="papeleta-motivo">
+              {{ p.motivo }}
+              <span *ngIf="p.sR === 'SR'" class="badge-sr">SR</span>
+            </div>
+            <div class="papeleta-horario" *ngIf="p.sale">
+              🕐 Sale: {{ p.sale }} <span *ngIf="p.regresa"> — Regresa: {{ p.regresa }}</span>
+            </div>
+            <div class="papeleta-desc">{{ p.descripcion }}</div>
+          </div>
+          <!-- PAGINACION -->
+          <div class="paginacion" *ngIf="totalPaginas > 1">
+            <button class="btn-pagina" *ngFor="let p of [].constructor(totalPaginas); let i = index"
+              [class.activa]="paginaActual === i + 1" (click)="cambiarPagina(i + 1)">
+              {{ i + 1 }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESCANEO -->
+    <div class="escaneo-placeholder" *ngIf="tabActivo === 'escaneo'">
+      <div class="icono">📷</div>
+      <p>Módulo de escaneo en construcción</p>
+    </div>
+
+    <div class="no-encontrado" *ngIf="buscado && tabActivo !== 'papeletas' && tabActivo !== 'escaneo' && (!resultado || !resultado.encontrado)">
+      <div class="icono">⚠️</div>
+      <p>Persona no encontrada en el sistema</p>
+    </div>
+
+    <button class="btn-limpiar" *ngIf="buscado && tabActivo !== 'escaneo'" (click)="limpiar()">Nueva búsqueda</button>
+  </div>
+</div>
