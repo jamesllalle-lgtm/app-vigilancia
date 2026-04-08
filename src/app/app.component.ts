@@ -2,6 +2,7 @@ import { Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -17,9 +18,11 @@ export class AppComponent implements OnDestroy {
   @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
   // URLs de los backends
-  readonly BACKEND_NET = 'http://10.1.37.62:5000';
+  // readonly BACKEND_NET = 'http://10.1.37.62:5000';
+  readonly BACKEND_NET = '';
   // readonly BACKEND_FLASK = 'http://10.1.37.62:5001';
-  readonly BACKEND_FLASK = 'https://10.1.37.62:5001';
+  // readonly BACKEND_FLASK = 'https://10.1.37.62:5001';
+  readonly BACKEND_FLASK = '';
 
   // Estado general
   codigo: string = '';
@@ -69,7 +72,7 @@ export class AppComponent implements OnDestroy {
         next: (data: any) => {
           this.resultado = data;
           if (data.encontrado) {
-            this.urlFoto = `https://campus.uss.edu.pe/CampusNet4/imagenes/PerImagen.aspx?CPerCodigo=${data.dni}`;
+            this.urlFoto = `https://campus.uss.edu.pe/CampusNet4/imagenes/PerImagen.aspx?CPerCodigo=${data.persona.codigo}`;
           }
           this.cargando = false;
           this.buscado = true;
@@ -78,22 +81,23 @@ export class AppComponent implements OnDestroy {
       });
 
     } else if (this.tabActivo === 'papeletas') {
-      this.http.get<any>(`${this.BACKEND_NET}/api/persona/dni/${this.codigo.trim()}`).subscribe({
-        next: (persona: any) => {
+      forkJoin({
+        persona: this.http.get<any>(`${this.BACKEND_NET}/api/persona/dni/${this.codigo.trim()}`),
+        papeletas: this.http.get<any[]>(`${this.BACKEND_NET}/api/papeletas/dni/${this.codigo.trim()}`)
+      }).subscribe({
+        next: ({ persona, papeletas }) => {
           if (persona.encontrado) {
             this.urlFoto = `https://campus.uss.edu.pe/CampusNet4/imagenes/PerImagen.aspx?CPerCodigo=${persona.persona.codigo}`;
           }
-          this.http.get<any[]>(`${this.BACKEND_NET}/api/papeletas/dni/${this.codigo.trim()}`).subscribe({
-            next: (data: any[]) => {
-              this.papeletas = data;
-              this.paginaActual = 1;
-              this.cargando = false;
-              this.buscado = true;
-            },
-            error: () => { this.cargando = false; this.buscado = true; }
-          });
+          this.papeletas = papeletas;
+          this.paginaActual = 1;
+          this.cargando = false;
+          this.buscado = true;
         },
-        error: () => { this.cargando = false; this.buscado = true; }
+        error: () => {
+          this.cargando = false;
+          this.buscado = true;
+        }
       });
     }
   }

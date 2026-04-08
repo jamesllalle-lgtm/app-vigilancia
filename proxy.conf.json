@@ -1,0 +1,12 @@
+{
+  "/api": {
+    "target": "https://10.1.37.62:5000",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/escanear": {
+    "target": "https://10.1.37.62:5001",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

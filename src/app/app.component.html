@@ -2,23 +2,17 @@
   <div class="card">
     <div class="header">
       <div class="logo">🛡️</div>
-      <h1>Hola Control de Ingreso</h1>
+      <h1>Control de Ingreso</h1>
       <p class="subtitle">Sistema de Vigilancia</p>
     </div>
 
     <div class="tabs">
-      <button class="tab" [class.active]="tabActivo === 'dni'" (click)="cambiarTab('dni')">
-        DNI
-      </button>
-      <button class="tab" [class.active]="tabActivo === 'papeletas'" (click)="cambiarTab('papeletas')">
-        Papeletas
-      </button>
-      <button class="tab" [class.active]="tabActivo === 'escaneo'" (click)="cambiarTab('escaneo')">
-        Escaneo
-      </button>
+      <button class="tab" [class.active]="tabActivo === 'dni'" (click)="cambiarTab('dni')">DNI</button>
+      <button class="tab" [class.active]="tabActivo === 'papeletas'" (click)="cambiarTab('papeletas')">Papeletas</button>
+      <button class="tab" [class.active]="tabActivo === 'escaneo'" (click)="cambiarTab('escaneo')">Escaneo</button>
     </div>
 
-    <!-- BUSCADOR (solo tabs DNI y papeletas) -->
+    <!-- BUSCADOR -->
     <div class="search-box" *ngIf="tabActivo !== 'escaneo'">
       <input type="text" [(ngModel)]="codigo"
         [placeholder]="tabActivo === 'dni' ? 'Ingrese DNI del trabajador' : 'Ingrese DNI para ver papeletas'"
@@ -33,9 +27,7 @@
     <div class="resultado" *ngIf="buscado && resultado && tabActivo === 'dni'">
       <div class="resultado-card" [ngClass]="resultado.esTrabajador ? 'autorizado' : 'no-autorizado'">
         <div class="icono">{{ resultado.esTrabajador ? '✅' : '❌' }}</div>
-        <div class="estado-texto">
-          {{ resultado.esTrabajador ? 'ACCESO PERMITIDO' : 'NO ES TRABAJADOR' }}
-        </div>
+        <div class="estado-texto">{{ resultado.esTrabajador ? 'ACCESO PERMITIDO' : 'NO ES TRABAJADOR' }}</div>
       </div>
       <div class="datos-persona" *ngIf="resultado.encontrado">
         <div class="foto-persona">
@@ -88,6 +80,10 @@
               🕐 Sale: {{ p.sale }} <span *ngIf="p.regresa"> — Regresa: {{ p.regresa }}</span>
             </div>
             <div class="papeleta-desc">{{ p.descripcion }}</div>
+            <div class="papeleta-aprobaciones" *ngIf="p.estado || p.estadoRRHH">
+              <span class="badge-area" *ngIf="p.estado">✅ {{ p.estado }} por área</span>
+              <span class="badge-rrhh" *ngIf="p.estadoRRHH">✅ {{ p.estadoRRHH }} por DGP</span>
+            </div>
           </div>
           <div class="paginacion" *ngIf="totalPaginas > 1">
             <button class="btn-pagina" *ngFor="let p of [].constructor(totalPaginas); let i = index"
@@ -100,61 +96,81 @@
     </div>
 
     <!-- ESCANEO -->
-<div class="escaneo-container" *ngIf="tabActivo === 'escaneo'">
+    <div class="escaneo-container" *ngIf="tabActivo === 'escaneo'">
+      <div class="camara-box" *ngIf="!escaneoBuscado">
+        <video #videoElement autoplay playsinline class="video-preview"></video>
+        <canvas #canvasElement style="display:none"></canvas>
+        <div class="camara-guia">Centra el carnet aquí</div>
+      </div>
+      <div class="escaneo-botones" *ngIf="!escaneoBuscado">
+        <button class="btn-escanear" (click)="escanear()" [disabled]="escaneoCargando">
+          <span *ngIf="!escaneoCargando">📷 Escanear Carnet</span>
+          <span *ngIf="escaneoCargando">🔍 Procesando...</span>
+        </button>
+        <button class="btn-cambiar-camara" (click)="cambiarCamara()">🔄 Cambiar cámara</button>
+      </div>
 
-  <div class="camara-box" *ngIf="!escaneoBuscado">
-    <video #videoElement autoplay playsinline class="video-preview"></video>
-    <canvas #canvasElement style="display:none"></canvas>
-    <div class="camara-guia">Centra el carnet aquí</div>
-  </div>
+      <div *ngIf="escaneoBuscado && escaneoResultado">
+        <div class="resultado-card" [ngClass]="escaneoResultado.esTrabajador ? 'autorizado' : 'no-autorizado'">
+          <div class="icono">{{ escaneoResultado.esTrabajador ? '✅' : '❌' }}</div>
+          <div class="estado-texto">{{ escaneoResultado.esTrabajador ? 'ACCESO PERMITIDO' : 'NO ES TRABAJADOR' }}</div>
+        </div>
 
-  <div class="escaneo-botones" *ngIf="!escaneoBuscado">
-    <button class="btn-escanear" (click)="escanear()" [disabled]="escaneoCargando">
-      <span *ngIf="!escaneoCargando">📷 Escanear Carnet</span>
-      <span *ngIf="escaneoCargando">🔍 Procesando...</span>
-    </button>
-    <button class="btn-cambiar-camara" (click)="cambiarCamara()">
-      🔄 Cambiar cámara
-    </button>
-  </div>
+        <div class="datos-persona-horizontal" *ngIf="escaneoResultado.encontrado">
+          <div class="foto-lado">
+            <img [src]="urlFotoEscaneo" alt="Foto" class="foto" (error)="onFotoError($event)" />
+          </div>
+          <div class="info-lado">
+            <div class="dato">
+              <span class="label">Nombre</span>
+              <span class="valor">{{ escaneoResultado.persona.nombre }}</span>
+            </div>
+            <div class="dato">
+              <span class="label">DNI detectado</span>
+              <span class="valor">{{ escaneoResultado.dni_detectado }}</span>
+            </div>
+            <div class="dato">
+              <span class="label">Total papeletas</span>
+              <span class="valor">{{ escaneoResultado.totalPapeletas }}</span>
+            </div>
+          </div>
+        </div>
 
-  <div *ngIf="escaneoBuscado && escaneoResultado">
-    <div class="resultado-card" [ngClass]="escaneoResultado.esTrabajador ? 'autorizado' : 'no-autorizado'">
-      <div class="icono">{{ escaneoResultado.esTrabajador ? '✅' : '❌' }}</div>
-      <div class="estado-texto">
-        {{ escaneoResultado.esTrabajador ? 'ACCESO PERMITIDO' : 'NO ES TRABAJADOR' }}
+        <!-- Todas las papeletas -->
+        <div *ngIf="escaneoResultado.totalPapeletas > 0" style="margin-top: 12px;">
+          <div class="papeleta-item" *ngFor="let p of escaneoResultado.todasPapeletas">
+            <div class="papeleta-header">
+              <span class="papeleta-fecha">{{ p.Fecha }}</span>
+              <span class="papeleta-estado" [ngClass]="getEstadoClass(p.Estado)">{{ p.Estado }}</span>
+            </div>
+            <div class="papeleta-motivo">
+              {{ p.Motivo }}
+              <span *ngIf="p.SR === 'SR'" class="badge-sr">SR</span>
+            </div>
+            <div class="papeleta-horario" *ngIf="p.Sale">
+              🕐 Sale: {{ p.Sale }}
+              <span *ngIf="p.Regresa"> — Regresa: {{ p.Regresa }}</span>
+            </div>
+            <div class="papeleta-desc">{{ p.Descripcion }}</div>
+            <div class="papeleta-aprobaciones" *ngIf="p.Estado || p.EstadoRRHH">
+              <span class="badge-area" *ngIf="p.Estado">✅ {{ p.Estado }} por área</span>
+              <span class="badge-rrhh" *ngIf="p.EstadoRRHH">✅ {{ p.EstadoRRHH }} por DGP</span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="escaneoResultado.totalPapeletas === 0" class="sin-papeletas-hoy">
+          Sin papeletas registradas
+        </div>
+
+        <div class="no-encontrado" *ngIf="!escaneoResultado.encontrado">
+          <div class="icono">⚠️</div>
+          <p>{{ escaneoResultado.mensaje }}</p>
+        </div>
+
+        <button class="btn-limpiar" (click)="limpiarEscaneo()">Nueva búsqueda</button>
       </div>
     </div>
-
-    <div class="datos-persona-horizontal" *ngIf="escaneoResultado.encontrado">
-      <div class="foto-lado">
-        <img [src]="urlFotoEscaneo" alt="Foto" class="foto" (error)="onFotoError($event)" />
-      </div>
-      <div class="info-lado">
-        <div class="dato">
-          <span class="label">Nombre</span>
-          <span class="valor">{{ escaneoResultado.persona.nombre }} {{ escaneoResultado.persona.apellidoPat }} {{ escaneoResultado.persona.apellidoMat }}</span>
-        </div>
-        <div class="dato">
-          <span class="label">DNI detectado</span>
-          <span class="valor">{{ escaneoResultado.dni_detectado }}</span>
-        </div>
-        <div class="dato" *ngIf="escaneoResultado.papeletasHoy?.length > 0">
-          <span class="label">Papeletas hoy</span>
-          <span class="valor">{{ escaneoResultado.papeletasHoy.length }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="no-encontrado" *ngIf="!escaneoResultado.encontrado">
-      <div class="icono">⚠️</div>
-      <p>{{ escaneoResultado.mensaje }}</p>
-    </div>
-
-    <button class="btn-limpiar" (click)="limpiarEscaneo()">Nueva búsqueda</button>
-  </div>
-
-</div>
 
     <div class="no-encontrado"
       *ngIf="buscado && tabActivo !== 'papeletas' && tabActivo !== 'escaneo' && (!resultado || !resultado.encontrado)">
